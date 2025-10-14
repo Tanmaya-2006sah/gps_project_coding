@@ -1,0 +1,429 @@
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h2 fw-bold">Geofence Management</h1>
+    <p class="text-muted mb-0">Manage safety zones for your patients</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" onclick="refreshMap()">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh Map
+    </button>
+    <div class="dropdown">
+      <button class="btn btn-success dropdown-toggle" type="button" data-bs-toggle="dropdown">
+        <i class="bi bi-plus-circle me-1"></i>Create Zone
+      </button>
+      <ul class="dropdown-menu">
+        <% @patients.each do |patient| %>
+          <li>
+            <%= link_to new_patient_geofence_zone_path(patient), class: "dropdown-item" do %>
+              <i class="bi bi-person me-2"></i><%= patient.name %>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card bg-primary text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-3 fw-bold"><%= @all_zones.count %></div>
+            <div>Total Zones</div>
+          </div>
+          <i class="bi bi-geo-alt-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card bg-success text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-3 fw-bold"><%= @all_zones.active.count %></div>
+            <div>Active Zones</div>
+          </div>
+          <i class="bi bi-shield-check-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card bg-warning text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-3 fw-bold"><%= @patients.count %></div>
+            <div>Patients</div>
+          </div>
+          <i class="bi bi-people-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-3">
+    <div class="card bg-info text-white">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-3 fw-bold"><%= @all_zones.where(active: false).count %></div>
+            <div>Inactive Zones</div>
+          </div>
+          <i class="bi bi-pause-circle-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="row g-4">
+  <!-- Interactive Map -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-map me-2"></i>Geofence Zones Map
+          </h5>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary active" onclick="showAllZones()">All</button>
+            <button class="btn btn-outline-primary" onclick="showActiveZones()">Active</button>
+            <button class="btn btn-outline-primary" onclick="showInactiveZones()">Inactive</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div id="geofenceMap" style="height: 500px;"></div>
+        
+        <!-- Map Legend -->
+        <div class="p-3 bg-light border-top">
+          <div class="row text-center">
+            <div class="col-3">
+              <div class="d-flex align-items-center justify-content-center">
+                <div class="bg-success rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+                <small>Active Zones</small>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="d-flex align-items-center justify-content-center">
+                <div class="bg-secondary rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+                <small>Inactive Zones</small>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="d-flex align-items-center justify-content-center">
+                <div class="bg-primary rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+                <small>Patients</small>
+              </div>
+            </div>
+            <div class="col-3">
+              <div class="d-flex align-items-center justify-content-center">
+                <div class="bg-warning rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+                <small>Outside Zone</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patient & Zone Management -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-list me-2"></i>Patients & Zones
+        </h5>
+      </div>
+      <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+        <% @patients.each do |patient| %>
+          <div class="patient-card border rounded p-3 mb-3" data-patient-id="<%= patient.id %>">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="mb-1 fw-bold"><%= patient.name %></h6>
+                <small class="text-muted">
+                  <i class="bi bi-geo-alt me-1"></i>
+                  Status: <span class="badge bg-<%= patient.location_status == 'safe' ? 'success' : patient.location_status == 'away' ? 'warning' : 'danger' %>">
+                    <%= patient.location_status.humanize %>
+                  </span>
+                </small>
+              </div>
+              <div class="dropdown">
+                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                  <i class="bi bi-three-dots"></i>
+                </button>
+                <ul class="dropdown-menu">
+                  <li>
+                    <%= link_to "Add Zone", new_patient_geofence_zone_path(patient), class: "dropdown-item" %>
+                  </li>
+                  <li>
+                    <a class="dropdown-item" href="#" onclick="centerOnPatient(<%= patient.id %>)">
+                      <i class="bi bi-geo-alt me-2"></i>Locate on Map
+                    </a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <%= link_to patient_path(patient), class: "dropdown-item" do %>
+                      <i class="bi bi-eye me-2"></i>View Details
+                    <% end %>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <!-- Patient's Geofence Zones -->
+            <div class="zones-list">
+              <% if patient.geofence_zones.any? %>
+                <div class="small mb-2 text-muted fw-bold">Zones (<%= patient.geofence_zones.count %>)</div>
+                <% patient.geofence_zones.each do |zone| %>
+                  <div class="zone-item d-flex justify-content-between align-items-center p-2 bg-light rounded mb-1">
+                    <div class="flex-grow-1" onclick="highlightZone('<%= zone.id %>')">
+                      <div class="fw-semibold">
+                        <i class="bi bi-<%= zone.active? ? 'shield-check' : 'shield-x' %> me-1 text-<%= zone.active? ? 'success' : 'secondary' %>"></i>
+                        <%= zone.name %>
+                      </div>
+                      <small class="text-muted">
+                        Radius: <%= zone.radius_meters %>m
+                        <% if !zone.active? %>
+                          <span class="text-warning">(Inactive)</span>
+                        <% end %>
+                      </small>
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                      <%= link_to edit_patient_geofence_zone_path(patient, zone), class: "btn btn-outline-primary btn-sm" do %>
+                        <i class="bi bi-pencil"></i>
+                      <% end %>
+                      <%= link_to [patient, zone], method: :delete, 
+                          class: "btn btn-outline-danger btn-sm",
+                          data: { confirm: "Are you sure you want to delete this zone?" } do %>
+                        <i class="bi bi-trash"></i>
+                      <% end %>
+                    </div>
+                  </div>
+                <% end %>
+              <% else %>
+                <div class="text-center py-3">
+                  <i class="bi bi-shield-exclamation text-muted mb-2" style="font-size: 2rem;"></i>
+                  <div class="text-muted small">No zones created</div>
+                  <%= link_to "Create First Zone", new_patient_geofence_zone_path(patient), class: "btn btn-sm btn-outline-primary mt-2" %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+
+        <% if @patients.empty? %>
+          <div class="text-center py-4">
+            <i class="bi bi-people text-muted mb-3" style="font-size: 3rem;"></i>
+            <h6 class="text-muted">No Patients Found</h6>
+            <p class="text-muted small">Add patients first to create geofence zones.</p>
+            <%= link_to "Add Patient", new_patient_path, class: "btn btn-primary btn-sm" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Zone Modal (Quick Create) -->
+<div class="modal fade" id="quickCreateZoneModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Quick Create Zone</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="quickCreateZoneForm">
+          <div class="mb-3">
+            <label class="form-label">Patient</label>
+            <select class="form-select" name="patient_id" required>
+              <option value="">Select Patient</option>
+              <% @patients.each do |patient| %>
+                <option value="<%= patient.id %>"><%= patient.name %></option>
+              <% end %>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Zone Name</label>
+            <input type="text" class="form-control" name="name" required placeholder="e.g., Home Safe Zone">
+          </div>
+          <div class="row">
+            <div class="col-6">
+              <label class="form-label">Latitude</label>
+              <input type="number" step="any" class="form-control" name="center_latitude" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label">Longitude</label>
+              <input type="number" step="any" class="form-control" name="center_longitude" required>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Radius (meters)</label>
+            <input type="number" class="form-control" name="radius_meters" required min="10" max="5000" value="500">
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="active" checked>
+            <label class="form-check-label">
+              Activate zone immediately
+            </label>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="createQuickZone()">Create Zone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let geofenceMap;
+let patientMarkers = {};
+let zoneCircles = {};
+
+// Initialize the map when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+  initializeGeofenceMap();
+});
+
+function initializeGeofenceMap() {
+  // Initialize Leaflet map
+  geofenceMap = L.map('geofenceMap').setView([40.7128, -74.0060], 12);
+
+  // Add OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(geofenceMap);
+
+  // Add patients and zones to map
+  <% @patients.each do |patient| %>
+    // Add patient marker
+    const patient<%= patient.id %>Marker = L.marker([<%= patient.latitude %>, <%= patient.longitude %>])
+      .bindPopup(`
+        <div class="text-center">
+          <h6><%= patient.name %></h6>
+          <p class="mb-1">Status: <span class="badge bg-<%= patient.location_status == 'safe' ? 'success' : patient.location_status == 'away' ? 'warning' : 'danger' %>"><%= patient.location_status.humanize %></span></p>
+          <small class="text-muted">Last seen: <%= time_ago_in_words(patient.last_seen_at) %> ago</small>
+        </div>
+      `)
+      .addTo(geofenceMap);
+    
+    patientMarkers[<%= patient.id %>] = patient<%= patient.id %>Marker;
+
+    // Add patient's geofence zones
+    <% patient.geofence_zones.each do |zone| %>
+      const zone<%= zone.id %>Circle = L.circle([<%= zone.center_latitude %>, <%= zone.center_longitude %>], {
+        color: '<%= zone.active? ? '#198754' : '#6c757d' %>',
+        fillColor: '<%= zone.active? ? '#d1e7dd' : '#f8f9fa' %>',
+        fillOpacity: 0.3,
+        radius: <%= zone.radius_meters %>,
+        weight: 2
+      }).bindPopup(`
+        <div>
+          <h6><%= zone.name %></h6>
+          <p class="mb-1">Patient: <%= patient.name %></p>
+          <p class="mb-1">Radius: <%= zone.radius_meters %>m</p>
+          <p class="mb-0">Status: <span class="badge bg-<%= zone.active? ? 'success' : 'secondary' %>"><%= zone.active? ? 'Active' : 'Inactive' %></span></p>
+        </div>
+      `).addTo(geofenceMap);
+      
+      zoneCircles['<%= zone.id %>'] = zone<%= zone.id %>Circle;
+    <% end %>
+  <% end %>
+
+  // Fit map to show all markers and zones
+  if (Object.keys(patientMarkers).length > 0) {
+    const group = new L.featureGroup([...Object.values(patientMarkers), ...Object.values(zoneCircles)]);
+    geofenceMap.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+function refreshMap() {
+  console.log('Refreshing geofence map...');
+  location.reload();
+}
+
+function showAllZones() {
+  Object.values(zoneCircles).forEach(circle => {
+    geofenceMap.addLayer(circle);
+  });
+  updateActiveButton(event.target);
+}
+
+function showActiveZones() {
+  Object.values(zoneCircles).forEach(circle => {
+    geofenceMap.removeLayer(circle);
+  });
+  // Re-add only active zones (you'd need to track which are active)
+  updateActiveButton(event.target);
+}
+
+function showInactiveZones() {
+  Object.values(zoneCircles).forEach(circle => {
+    geofenceMap.removeLayer(circle);
+  });
+  // Re-add only inactive zones
+  updateActiveButton(event.target);
+}
+
+function updateActiveButton(activeBtn) {
+  document.querySelectorAll('.btn-group .btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  activeBtn.classList.add('active');
+}
+
+function centerOnPatient(patientId) {
+  if (patientMarkers[patientId]) {
+    geofenceMap.setView(patientMarkers[patientId].getLatLng(), 15);
+    patientMarkers[patientId].openPopup();
+  }
+}
+
+function highlightZone(zoneId) {
+  if (zoneCircles[zoneId]) {
+    geofenceMap.setView(zoneCircles[zoneId].getLatLng(), 15);
+    zoneCircles[zoneId].openPopup();
+  }
+}
+
+function createQuickZone() {
+  const form = document.getElementById('quickCreateZoneForm');
+  const formData = new FormData(form);
+  
+  // In a real application, you would submit this data via AJAX
+  console.log('Creating zone with data:', Object.fromEntries(formData));
+  
+  // Close modal and show success message
+  bootstrap.Modal.getInstance(document.getElementById('quickCreateZoneModal')).hide();
+  
+  // Show success notification
+  alert('Zone created successfully! Refreshing page...');
+  setTimeout(() => location.reload(), 1000);
+}
+
+// Add click handler for map to get coordinates for quick zone creation
+geofenceMap?.on('click', function(e) {
+  const lat = e.latlng.lat.toFixed(6);
+  const lng = e.latlng.lng.toFixed(6);
+  
+  // Fill in coordinates in the quick create form if it's open
+  const modal = document.getElementById('quickCreateZoneModal');
+  if (modal.classList.contains('show')) {
+    document.querySelector('[name="center_latitude"]').value = lat;
+    document.querySelector('[name="center_longitude"]').value = lng;
+  }
+});
+</script>

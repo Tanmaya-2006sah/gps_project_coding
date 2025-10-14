@@ -1,0 +1,136 @@
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold text-dark mb-1">Add New Patient</h2>
+    <p class="text-muted mb-0">Enter patient information for monitoring</p>
+  </div>
+  <div>
+    <%= link_to "Back to Patients", patients_path, class: "btn btn-outline-secondary" %>
+  </div>
+</div>
+
+<!-- Patient Form -->
+<div class="row justify-content-center">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-person-plus-fill me-2 text-primary"></i>
+          Patient Information
+        </h5>
+      </div>
+      <div class="card-body">
+        <%= form_with model: @patient, local: true, class: "row g-3" do |f| %>
+          <% if @patient.errors.any? %>
+            <div class="col-12">
+              <div class="alert alert-danger" role="alert">
+                <h6 class="alert-heading">Please correct the following errors:</h6>
+                <ul class="mb-0">
+                  <% @patient.errors.full_messages.each do |message| %>
+                    <li><%= message %></li>
+                  <% end %>
+                </ul>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Basic Information -->
+          <div class="col-12">
+            <h6 class="text-muted border-bottom pb-2 mb-3">Basic Information</h6>
+          </div>
+          
+          <div class="col-md-8">
+            <%= f.label :name, class: "form-label" %>
+            <%= f.text_field :name, class: "form-control", placeholder: "Enter patient's full name" %>
+          </div>
+          
+          <div class="col-md-4">
+            <%= f.label :age, class: "form-label" %>
+            <%= f.number_field :age, class: "form-control", placeholder: "Age", min: 1, max: 120 %>
+          </div>
+          
+          <div class="col-md-6">
+            <%= f.label :gender, class: "form-label" %>
+            <%= f.select :gender, 
+                options_for_select([
+                  ['Select Gender', ''],
+                  ['Male', 'male'],
+                  ['Female', 'female'], 
+                  ['Other', 'other']
+                ], @patient.gender), 
+                {}, 
+                { class: "form-select" } %>
+          </div>
+          
+          <div class="col-12">
+            <%= f.label :medical_condition, class: "form-label" %>
+            <%= f.text_area :medical_condition, 
+                class: "form-control", 
+                rows: 3, 
+                placeholder: "Describe the patient's medical condition, medications, and any special care instructions..." %>
+          </div>
+
+          <!-- Location Information -->
+          <div class="col-12 mt-4">
+            <h6 class="text-muted border-bottom pb-2 mb-3">Location Information</h6>
+          </div>
+          
+          <div class="col-md-6">
+            <%= f.label :latitude, class: "form-label" %>
+            <div class="input-group">
+              <%= f.number_field :latitude, 
+                  class: "form-control", 
+                  placeholder: "40.7128", 
+                  step: :any %>
+              <button class="btn btn-outline-secondary" type="button" id="get-current-location">
+                <i class="bi bi-geo-alt-fill"></i> Get Current
+              </button>
+            </div>
+            <div class="form-text">Patient's current latitude coordinate</div>
+          </div>
+          
+          <div class="col-md-6">
+            <%= f.label :longitude, class: "form-label" %>
+            <%= f.number_field :longitude, 
+                class: "form-control", 
+                placeholder: "-74.0060", 
+                step: :any %>
+            <div class="form-text">Patient's current longitude coordinate</div>
+          </div>
+
+          <!-- Last Seen -->
+          <div class="col-md-6">
+            <%= f.label :last_seen_at, class: "form-label" %>
+            <%= f.datetime_local_field :last_seen_at, 
+                class: "form-control",
+                value: @patient.last_seen_at&.strftime("%Y-%m-%dT%H:%M") %>
+            <div class="form-text">When was the patient last seen?</div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="col-12 mt-4">
+            <hr>
+            <div class="d-flex gap-2">
+              <%= f.submit "Add Patient", class: "btn btn-primary" %>
+              <%= link_to "Cancel", patients_path, class: "btn btn-secondary" %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Location Helper Script -->
+<script>
+  document.getElementById('get-current-location').addEventListener('click', function() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        document.getElementById('patient_latitude').value = position.coords.latitude;
+        document.getElementById('patient_longitude').value = position.coords.longitude;
+      });
+    } else {
+      alert('Geolocation is not supported by this browser.');
+    }
+  });
+</script>

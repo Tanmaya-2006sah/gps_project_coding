@@ -1,0 +1,193 @@
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h2 fw-bold">Notifications</h1>
+    <p class="text-muted mb-0">
+      <%= @total_count %> total notifications
+      <% if @unread_count > 0 %>
+        • <span class="badge bg-danger"><%= @unread_count %> unread</span>
+      <% end %>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to notifications_path, class: "btn btn-outline-primary" do %>
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    <% end %>
+    <button class="btn btn-success" onclick="markAllAsRead()">
+      <i class="bi bi-check-all me-1"></i>Mark All Read
+    </button>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-md-3">
+        <%= form_with url: notifications_path, method: :get, local: true, class: "d-inline" do |form| %>
+          <%= form.select :type, 
+              options_for_select([
+                ['All Types', ''],
+                ['Geofence Violations', 'geofence_violation'],
+                ['Vital Signs Alerts', 'vital_signs_alert'],
+                ['Activity Alerts', 'activity_alert'],
+                ['System Alerts', 'system_alert']
+              ], @filter_type),
+              {},
+              { class: "form-select", onchange: "this.form.submit()" } %>
+          <%= form.hidden_field :priority, value: @filter_priority %>
+        <% end %>
+      </div>
+      <div class="col-md-3">
+        <%= form_with url: notifications_path, method: :get, local: true, class: "d-inline" do |form| %>
+          <%= form.select :priority, 
+              options_for_select([
+                ['All Priorities', ''],
+                ['Critical', 'critical'],
+                ['High', 'high'],
+                ['Medium', 'medium'],
+                ['Low', 'low']
+              ], @filter_priority),
+              {},
+              { class: "form-select", onchange: "this.form.submit()" } %>
+          <%= form.hidden_field :type, value: @filter_type %>
+        <% end %>
+      </div>
+      <div class="col-md-6">
+        <div class="text-end">
+          <% if @filter_type.present? || @filter_priority.present? %>
+            <%= link_to notifications_path, class: "btn btn-outline-secondary" do %>
+              <i class="bi bi-x-circle me-1"></i>Clear Filters
+            <% end %>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Notifications List -->
+<div class="row">
+  <div class="col-12">
+    <% if @notifications.any? %>
+      <% @notifications.each do |notification| %>
+        <div class="card mb-3 <%= 'border-start border-4 border-primary' unless notification.read? %>">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-start">
+              <div class="flex-grow-1">
+                <div class="d-flex align-items-center mb-2">
+                  <h6 class="mb-0 me-2">
+                    <%= notification.title %>
+                    <% unless notification.read? %>
+                      <span class="badge bg-primary ms-1">NEW</span>
+                    <% end %>
+                  </h6>
+                  <span class="badge bg-<%= notification_priority_color(notification.priority) %> me-2">
+                    <%= notification.priority.upcase %>
+                  </span>
+                  <span class="badge bg-secondary">
+                    <%= notification.notification_type.humanize %>
+                  </span>
+                </div>
+                
+                <p class="text-muted mb-2"><%= notification.message %></p>
+                
+                <div class="d-flex align-items-center text-muted small">
+                  <% if notification.patient %>
+                    <i class="bi bi-person me-1"></i>
+                    <span class="me-3"><%= notification.patient.name %></span>
+                  <% end %>
+                  <i class="bi bi-clock me-1"></i>
+                  <span><%= time_ago_in_words(notification.created_at) %> ago</span>
+                </div>
+              </div>
+              
+              <div class="d-flex gap-2">
+                <% unless notification.read? %>
+                  <%= link_to mark_as_read_notification_path(notification), 
+                      method: :patch,
+                      class: "btn btn-sm btn-outline-primary",
+                      title: "Mark as read" do %>
+                    <i class="bi bi-check"></i>
+                  <% end %>
+                <% end %>
+                
+                <%= link_to notification, 
+                    class: "btn btn-sm btn-outline-secondary",
+                    title: "View details" do %>
+                  <i class="bi bi-eye"></i>
+                <% end %>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- Pagination -->
+      <% if @total_pages > 1 %>
+        <nav aria-label="Notifications pagination">
+          <ul class="pagination justify-content-center">
+            <!-- Previous Page -->
+            <li class="page-item <%= 'disabled' if @current_page <= 1 %>">
+              <%= link_to notifications_path(page: @current_page - 1, type: @filter_type, priority: @filter_priority), 
+                  class: "page-link" do %>
+                <i class="bi bi-chevron-left"></i> Previous
+              <% end %>
+            </li>
+            
+            <!-- Page Numbers -->
+            <% start_page = [@current_page - 2, 1].max %>
+            <% end_page = [start_page + 4, @total_pages].min %>
+            <% start_page = [end_page - 4, 1].max %>
+            
+            <% (start_page..end_page).each do |page| %>
+              <li class="page-item <%= 'active' if page == @current_page %>">
+                <%= link_to page, 
+                    notifications_path(page: page, type: @filter_type, priority: @filter_priority), 
+                    class: "page-link" %>
+              </li>
+            <% end %>
+            
+            <!-- Next Page -->
+            <li class="page-item <%= 'disabled' if @current_page >= @total_pages %>">
+              <%= link_to notifications_path(page: @current_page + 1, type: @filter_type, priority: @filter_priority), 
+                  class: "page-link" do %>
+                Next <i class="bi bi-chevron-right"></i>
+              <% end %>
+            </li>
+          </ul>
+        </nav>
+        
+        <div class="text-center text-muted small">
+          Showing <%= (@current_page - 1) * @per_page + 1 %> to 
+          <%= [@current_page * @per_page, @total_count].min %> of 
+          <%= @total_count %> notifications
+        </div>
+      <% end %>
+      
+    <% else %>
+      <!-- Empty State -->
+      <div class="text-center py-5">
+        <i class="bi bi-bell-slash fs-1 text-muted mb-3"></i>
+        <h5 class="text-muted">No notifications found</h5>
+        <p class="text-muted mb-0">
+          <% if @filter_type.present? || @filter_priority.present? %>
+            Try adjusting your filters or 
+            <%= link_to "view all notifications", notifications_path, class: "text-decoration-none" %>.
+          <% else %>
+            You're all caught up! New notifications will appear here.
+          <% end %>
+        </p>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+function markAllAsRead() {
+  if (confirm('Mark all notifications as read?')) {
+    // In a real application, you would implement this with an AJAX call
+    alert('Feature would mark all notifications as read');
+  }
+}
+</script>

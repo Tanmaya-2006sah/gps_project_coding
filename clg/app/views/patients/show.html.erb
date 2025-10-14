@@ -1,0 +1,254 @@
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold text-dark mb-1">
+      <%= @patient.name %>
+      <span class="badge bg-<%= @patient.status_color %> ms-2">
+        <%= @patient.location_status.humanize %>
+      </span>
+    </h2>
+    <p class="text-muted mb-0">
+      <%= @patient.age %> years old • <%= @patient.gender.capitalize %> • 
+      <% if @patient.last_seen_at %>
+        Last seen <%= time_ago_in_words(@patient.last_seen_at) %> ago
+      <% else %>
+        No recent activity
+      <% end %>
+    </p>
+  </div>
+  <div class="d-flex gap-2">
+    <%= link_to new_patient_geofence_zone_path(@patient), class: "btn btn-outline-primary" do %>
+      <i class="bi bi-geo-alt-fill me-1"></i> Add Geofence
+    <% end %>
+    <%= link_to edit_patient_path(@patient), class: "btn btn-outline-secondary" do %>
+      <i class="bi bi-pencil me-1"></i> Edit
+    <% end %>
+    <%= link_to patients_path, class: "btn btn-secondary" do %>
+      <i class="bi bi-arrow-left me-1"></i> Back
+    <% end %>
+  </div>
+</div>
+
+<!-- Patient Information Cards -->
+<div class="row g-4 mb-4">
+  <!-- Patient Location Map -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-geo-alt-fill me-2 text-primary"></i>
+          Current Location
+        </h5>
+      </div>
+      <div class="card-body p-0">
+        <% if @patient_location %>
+          <div id="patient-map" style="height: 400px;"></div>
+        <% else %>
+          <div class="text-center py-5">
+            <i class="bi bi-geo-alt display-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No Location Data</h5>
+            <p class="text-muted">Patient location has not been set yet.</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Patient Details -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-person-fill me-2 text-primary"></i>
+          Patient Details
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <strong class="text-muted small">MEDICAL CONDITION</strong>
+          <p class="mb-0"><%= @patient.medical_condition.presence || 'Not specified' %></p>
+        </div>
+        
+        <% if @patient_location %>
+          <div class="mb-3">
+            <strong class="text-muted small">COORDINATES</strong>
+            <p class="mb-0 font-monospace small">
+              <%= @patient_location[0].round(6) %>, <%= @patient_location[1].round(6) %>
+            </p>
+          </div>
+        <% end %>
+        
+        <div class="mb-3">
+          <strong class="text-muted small">GEOFENCE STATUS</strong>
+          <% if @patient.is_in_geofence? %>
+            <p class="mb-0 text-success">
+              <i class="bi bi-shield-check me-1"></i>
+              Inside safe zone
+            </p>
+          <% else %>
+            <p class="mb-0 text-danger">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Outside safe zone
+            </p>
+          <% end %>
+        </div>
+
+        <div class="mb-3">
+          <strong class="text-muted small">ACTIVE GEOFENCES</strong>
+          <% if @geofence_zones.any? %>
+            <% @geofence_zones.each do |zone| %>
+              <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+                <span class="small"><%= zone.name %></span>
+                <span class="badge bg-light text-dark small"><%= zone.radius_meters %>m</span>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="text-muted mb-0">No active geofences</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vital Signs and Activities -->
+<div class="row g-4">
+  <!-- Latest Vital Signs -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-heart-pulse-fill me-2 text-danger"></i>
+          Recent Vital Signs
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @latest_vital_signs.any? %>
+          <% @latest_vital_signs.each do |vital| %>
+            <div class="border rounded p-3 mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="small text-muted">
+                  <%= vital.recorded_at.strftime("%m/%d %I:%M %p") %>
+                </span>
+                <span class="badge bg-<%= vital.status_color %>">
+                  <%= vital.overall_status.capitalize %>
+                </span>
+              </div>
+              
+              <div class="row text-center">
+                <div class="col-3">
+                  <div class="small text-muted">Heart Rate</div>
+                  <div class="fw-bold text-<%= vital.heart_rate_status == 'normal' ? 'success' : 'warning' %>">
+                    <%= vital.heart_rate %>
+                  </div>
+                  <div class="small text-muted">BPM</div>
+                </div>
+                <div class="col-4">
+                  <div class="small text-muted">Blood Pressure</div>
+                  <div class="fw-bold text-<%= vital.blood_pressure_status == 'normal' ? 'success' : 'warning' %>">
+                    <%= vital.blood_pressure_systolic %>/<%= vital.blood_pressure_diastolic %>
+                  </div>
+                  <div class="small text-muted">mmHg</div>
+                </div>
+                <div class="col-3">
+                  <div class="small text-muted">Temperature</div>
+                  <div class="fw-bold text-<%= vital.temperature_status == 'normal' ? 'success' : 'warning' %>">
+                    <%= vital.temperature&.round(2) %>
+                  </div>
+                  <div class="small text-muted">°F</div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="bi bi-heart-pulse display-4 text-muted mb-2"></i>
+            <p class="text-muted mb-0">No vital signs recorded</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activities -->
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-activity me-2 text-info"></i>
+          Recent Activities
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @recent_activities.any? %>
+          <% @recent_activities.each do |activity| %>
+            <div class="d-flex align-items-center border-bottom pb-2 mb-2">
+              <div class="flex-shrink-0 me-3">
+                <div class="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center" 
+                     style="width: 35px; height: 35px;">
+                  <i class="<%= activity.activity_icon %>"></i>
+                </div>
+              </div>
+              <div class="flex-grow-1">
+                <div class="small">
+                  <strong><%= activity.formatted_type %></strong>
+                  <% if activity.description.present? %>
+                    <br><span class="text-muted"><%= activity.description %></span>
+                  <% end %>
+                </div>
+                <div class="text-muted small">
+                  <i class="bi bi-clock me-1"></i>
+                  <%= activity.time_ago %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="bi bi-activity display-4 text-muted mb-2"></i>
+            <p class="text-muted mb-0">No recent activities</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% if @patient_location %>
+  <!-- Map initialization script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initialize the map
+      const map = L.map('patient-map').setView([<%= @patient_location[0] %>, <%= @patient_location[1] %>], 15);
+      
+      // Add tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map);
+      
+      // Add patient marker
+      const patientIcon = L.divIcon({
+        html: '<i class="bi bi-person-fill text-primary" style="font-size: 20px;"></i>',
+        iconSize: [30, 30],
+        className: 'custom-div-icon'
+      });
+      
+      L.marker([<%= @patient_location[0] %>, <%= @patient_location[1] %>], {icon: patientIcon})
+        .addTo(map)
+        .bindPopup('<strong><%= @patient.name %></strong><br>Current Location')
+        .openPopup();
+      
+      // Add geofence zones
+      <% @geofence_zones.each do |zone| %>
+        const zone<%= zone.id %> = L.circle([<%= zone.center_latitude %>, <%= zone.center_longitude %>], {
+          color: '<%= @patient.is_in_geofence? ? "#28a745" : "#dc3545" %>',
+          fillColor: '<%= @patient.is_in_geofence? ? "#28a745" : "#dc3545" %>',
+          fillOpacity: 0.1,
+          radius: <%= zone.radius_meters %>
+        }).addTo(map);
+        
+        zone<%= zone.id %>.bindPopup('<strong><%= zone.name %></strong><br>Radius: <%= zone.radius_meters %>m');
+      <% end %>
+    });
+  </script>
+<% end %>

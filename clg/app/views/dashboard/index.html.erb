@@ -1,0 +1,728 @@
+<!-- Live Dashboard Container -->
+<div class="live-dashboard-container">
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold text-dark mb-1">Patient Monitoring Dashboard</h2>
+    <p class="text-muted mb-0">Real-time overview of patient health and location</p>
+  </div>
+  <div>
+    <%= link_to "Add Patient", new_patient_path, class: "btn btn-primary" %>
+  </div>
+</div>
+
+<!-- Dashboard Statistics Cards -->
+<div class="row g-4 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-primary text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold" data-stat="total-patients"><%= @total_patients %></div>
+            <div>Total Patients</div>
+          </div>
+          <div class="fs-1 opacity-75">
+            <i class="bi bi-people-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-success text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold" data-stat="patients-safe"><%= @patients_in_safe_zones %></div>
+            <div>In Safe Zones</div>
+          </div>
+          <div class="fs-1 opacity-75">
+            <i class="bi bi-shield-check"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-warning text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold" data-stat="unread-alerts"><%= current_user.unread_notifications_count %></div>
+            <div>Unread Alerts</div>
+          </div>
+          <div class="fs-1 opacity-75">
+            <i class="bi bi-bell-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-danger text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold" data-stat="critical-alerts"><%= @critical_alerts %></div>
+            <div>Critical Alerts</div>
+          </div>
+          <div class="fs-1 opacity-75">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Live Location Map -->
+<div class="row g-4 mb-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-white border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-map me-2 text-success"></i>
+            Live Patient Location Tracking
+          </h5>
+          <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-outline-primary" id="refreshMap">
+              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+            <button class="btn btn-sm btn-outline-success" id="centerMap">
+              <i class="bi bi-geo-alt me-1"></i>Center View
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div id="liveMap" style="height: 400px; width: 100%;"></div>
+        <div class="p-3 bg-light border-top">
+          <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-success rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Safe Zone</small>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-warning rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Away</small>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-danger rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Outside Zone</small>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-secondary rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Offline</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row g-4">
+  <!-- Patient Status Cards -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-people-fill me-2 text-primary"></i>
+          Patient Status Overview
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @patients.any? %>
+          <div class="row g-3">
+            <% @patients.each do |patient| %>
+              <div class="col-md-6">
+                <div class="border rounded p-3 h-100">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0 fw-bold"><%= patient.name %></h6>
+                    <span class="badge bg-<%= patient.status_color %>">
+                      <%= patient.location_status.humanize %>
+                    </span>
+                  </div>
+                  
+                  <div class="small text-muted mb-2">
+                    <i class="bi bi-person me-1"></i>
+                    <%= patient.age %> years, <%= patient.gender.capitalize %>
+                  </div>
+                  
+                  <% if patient.latitude && patient.longitude %>
+                    <div class="small mb-2">
+                      <i class="bi bi-geo-alt-fill me-1 text-primary"></i>
+                      Location: <%= patient.latitude.round(4) %>, <%= patient.longitude.round(4) %>
+                    </div>
+                  <% end %>
+                  
+                  <% if patient.last_seen_at %>
+                    <div class="small mb-2">
+                      <i class="bi bi-clock me-1 text-muted"></i>
+                      Last seen: <%= time_ago_in_words(patient.last_seen_at) %> ago
+                    </div>
+                  <% end %>
+                  
+                  <% latest_vitals = patient.latest_vital_signs %>
+                  <% if latest_vitals %>
+                    <div class="small mb-2">
+                      <span class="badge bg-<%= latest_vitals.status_color %> me-1">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                      </span>
+                      HR: <%= latest_vitals.heart_rate %> | 
+                      BP: <%= latest_vitals.blood_pressure_systolic %>/<%= latest_vitals.blood_pressure_diastolic %>
+                    </div>
+                  <% end %>
+                  
+                  <div class="mt-2">
+                    <%= link_to "View Details", patient, class: "btn btn-sm btn-outline-primary" %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-5">
+            <i class="bi bi-people display-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No Patients Added</h5>
+            <p class="text-muted">Start monitoring by adding your first patient.</p>
+            <%= link_to "Add Patient", new_patient_path, class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Vital Signs Summary -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-activity me-2 text-success"></i>
+          Recent Vital Signs
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @vital_signs_data.any? %>
+          <% @vital_signs_data.each do |vital_data| %>
+            <div class="border-bottom pb-2 mb-2">
+              <div class="d-flex justify-content-between align-items-center">
+                <strong class="small"><%= vital_data[:patient] %></strong>
+                <span class="badge bg-<%= vital_data[:status] == 'normal' ? 'success' : vital_data[:status] == 'warning' ? 'warning' : 'danger' %>">
+                  <%= vital_data[:status].capitalize %>
+                </span>
+              </div>
+              <div class="small text-muted">
+                <div>❤️ <%= vital_data[:heart_rate] %> BPM</div>
+                <div>🩸 <%= vital_data[:blood_pressure] %> mmHg</div>
+                <div>🌡️ <%= vital_data[:temperature] %>°F</div>
+                <div class="text-muted">
+                  <%= time_ago_in_words(vital_data[:recorded_at]) %> ago
+                </div>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="bi bi-heart-pulse display-4 text-muted mb-2"></i>
+            <p class="text-muted small mb-0">No vital signs recorded yet</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Real-time Vital Signs Monitoring -->
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-white border-bottom">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-heart-pulse me-2 text-danger"></i>
+            Live Vital Signs Monitor
+          </h5>
+          <div class="d-flex gap-2">
+            <span class="badge bg-success" id="vitalsStatus">
+              <i class="bi bi-wifi me-1"></i>Connected
+            </span>
+            <button class="btn btn-sm btn-outline-primary" id="refreshVitals">
+              <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <% if @patients.any? %>
+          <div class="row g-3" id="vitalsContainer">
+            <% @patients.each do |patient| %>
+              <div class="col-md-6 col-xl-4">
+                <div class="border rounded p-3 patient-vitals" data-patient-id="<%= patient.id %>">
+                  <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="mb-0 fw-bold"><%= patient.name %></h6>
+                    <% latest_vitals = patient.latest_vital_signs %>
+                    <% if latest_vitals %>
+                      <span class="badge bg-<%= latest_vitals.status_color %>" id="vitalStatus-<%= patient.id %>">
+                        <%= latest_vitals.status.humanize %>
+                      </span>
+                    <% else %>
+                      <span class="badge bg-secondary" id="vitalStatus-<%= patient.id %>">
+                        No Data
+                      </span>
+                    <% end %>
+                  </div>
+                  
+                  <div class="vital-metrics">
+                    <% if latest_vitals %>
+                      <div class="row g-2 mb-2">
+                        <div class="col-6">
+                          <div class="text-center p-2 bg-light rounded">
+                            <div class="text-danger fw-bold fs-5" id="heartRate-<%= patient.id %>">
+                              <%= latest_vitals.heart_rate %>
+                            </div>
+                            <small class="text-muted">❤️ BPM</small>
+                          </div>
+                        </div>
+                        <div class="col-6">
+                          <div class="text-center p-2 bg-light rounded">
+                            <div class="text-primary fw-bold fs-6" id="bloodPressure-<%= patient.id %>">
+                              <%= latest_vitals.blood_pressure_systolic %>/<%= latest_vitals.blood_pressure_diastolic %>
+                            </div>
+                            <small class="text-muted">🩸 mmHg</small>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="text-center p-2 bg-light rounded mb-2">
+                        <div class="text-warning fw-bold" id="temperature-<%= patient.id %>">
+                          <%= latest_vitals.temperature&.round(2) %>°F
+                        </div>
+                        <small class="text-muted">🌡️ Temperature</small>
+                      </div>
+                      <div class="small text-muted text-center" id="lastUpdate-<%= patient.id %>">
+                        Last update: <%= time_ago_in_words(latest_vitals.recorded_at) %> ago
+                      </div>
+                    <% else %>
+                      <div class="text-center py-3">
+                        <i class="bi bi-heart-pulse text-muted display-6"></i>
+                        <div class="small text-muted">No vital signs data</div>
+                      </div>
+                    <% end %>
+                  </div>
+                  
+                  <div class="mt-2 d-flex gap-1">
+                    <%= link_to "View History", patient, class: "btn btn-sm btn-outline-primary flex-fill" %>
+                    <button class="btn btn-sm btn-outline-success" onclick="refreshPatientVitals(<%= patient.id %>)">
+                      <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="text-center py-5">
+            <i class="bi bi-heart-pulse display-1 text-muted mb-3"></i>
+            <h5 class="text-muted">No Patients to Monitor</h5>
+            <p class="text-muted">Add patients to start monitoring their vital signs.</p>
+            <%= link_to "Add Patient", new_patient_path, class: "btn btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Activity Feed -->
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-white border-bottom">
+        <h5 class="card-title mb-0">
+          <i class="bi bi-activity me-2 text-info"></i>
+          Recent Patient Activity
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @recent_activities.any? %>
+          <div class="activity-feed">
+            <% @recent_activities.each do |activity| %>
+              <div class="d-flex align-items-center border-bottom pb-2 mb-2">
+                <div class="flex-shrink-0 me-3">
+                  <div class="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center" 
+                       style="width: 40px; height: 40px;">
+                    <i class="<%= activity.activity_icon %>"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="small">
+                    <strong><%= activity.patient.name %></strong> 
+                    <%= activity.formatted_type.downcase %>
+                    <% if activity.description.present? %>
+                      - <%= activity.description %>
+                    <% end %>
+                  </div>
+                  <div class="text-muted small">
+                    <i class="bi bi-clock me-1"></i>
+                    <%= activity.time_ago %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+          
+          <div class="text-center mt-3">
+            <%= link_to "View All Activities", patients_path, class: "btn btn-outline-primary btn-sm" %>
+          </div>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="bi bi-activity display-4 text-muted mb-2"></i>
+            <p class="text-muted mb-0">No recent activity recorded</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Notifications -->
+<% if @recent_notifications.any? %>
+  <div class="row g-4 mt-1">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header bg-white border-bottom">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-bell-fill me-2 text-warning"></i>
+              Recent Notifications
+            </h5>
+            <%= link_to "View All", notifications_path, class: "btn btn-outline-primary btn-sm" %>
+          </div>
+        </div>
+        <div class="card-body">
+          <% @recent_notifications.each do |notification| %>
+            <div class="alert alert-<%= notification.priority == 'critical' ? 'danger' : notification.priority == 'high' ? 'warning' : 'info' %> alert-dismissible" role="alert">
+              <div class="d-flex align-items-start">
+                <i class="<%= notification.type_icon %> me-2 mt-1"></i>
+                <div class="flex-grow-1">
+                  <h6 class="alert-heading mb-1"><%= notification.title %></h6>
+                  <p class="mb-1"><%= notification.message %></p>
+                  <div class="small">
+                    <% if notification.patient %>
+                      Patient: <strong><%= notification.patient.name %></strong> • 
+                    <% end %>
+                    <%= notification.time_ago %>
+                  </div>
+                </div>
+                <span class="badge bg-<%= notification.priority == 'critical' ? 'danger' : notification.priority == 'high' ? 'warning' : 'secondary' %>">
+                  <%= notification.priority.capitalize %>
+                </span>
+              </div>
+              
+              <%= link_to "×", notification_path(notification, format: :json), 
+                  method: :patch, 
+                  remote: true, 
+                  class: "btn-close", 
+                  "aria-label": "Close",
+                  data: { "turbo-method": "patch", action: "notification#mark_as_read" } %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+<% end %>
+
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Initialize the live map
+  initializeLiveMap();
+  
+  // Set up real-time updates
+  setupRealTimeUpdates();
+  
+  // Refresh buttons
+  document.getElementById('refreshMap')?.addEventListener('click', refreshMap);
+  document.getElementById('centerMap')?.addEventListener('click', centerMap);
+  document.getElementById('refreshVitals')?.addEventListener('click', refreshAllVitals);
+});
+
+let liveMap;
+let patientMarkers = {};
+
+// Initialize the live tracking map
+function initializeLiveMap() {
+  // Initialize map centered on first patient or default location
+  <% if @patients.any? && @patients.first.latitude && @patients.first.longitude %>
+    const centerLat = <%= @patients.first.latitude %>;
+    const centerLng = <%= @patients.first.longitude %>;
+  <% else %>
+    const centerLat = 40.7128;
+    const centerLng = -74.0060;
+  <% end %>
+  
+  liveMap = L.map('liveMap').setView([centerLat, centerLng], 12);
+  
+  // Add OpenStreetMap tiles
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(liveMap);
+  
+  // Add patient markers
+  <% @patients.each do |patient| %>
+    <% if patient.latitude && patient.longitude %>
+      addPatientMarker(<%= patient.id %>, {
+        lat: <%= patient.latitude %>,
+        lng: <%= patient.longitude %>,
+        name: '<%= j patient.name %>',
+        status: '<%= patient.location_status %>',
+        lastSeen: '<%= patient.last_seen_at ? time_ago_in_words(patient.last_seen_at) : 'Never' %>'
+      });
+      
+      // Add geofence zones for this patient
+      <% patient.geofence_zones.active.each do |zone| %>
+        addGeofenceZone(<%= zone.id %>, {
+          lat: <%= zone.center_latitude %>,
+          lng: <%= zone.center_longitude %>,
+          radius: <%= zone.radius_meters %>,
+          name: '<%= j zone.name %>',
+          patientName: '<%= j patient.name %>'
+        });
+      <% end %>
+    <% end %>
+  <% end %>
+}
+
+// Add patient marker to map
+function addPatientMarker(patientId, data) {
+  const statusColors = {
+    'safe': '#28a745',
+    'away': '#ffc107', 
+    'outside_zone': '#dc3545',
+    'offline': '#6c757d'
+  };
+  
+  const marker = L.circleMarker([data.lat, data.lng], {
+    radius: 10,
+    fillColor: statusColors[data.status] || '#6c757d',
+    color: '#ffffff',
+    weight: 2,
+    opacity: 1,
+    fillOpacity: 0.8
+  }).addTo(liveMap);
+  
+  const popupContent = `
+    <div class="text-center">
+      <h6 class="mb-2">${data.name}</h6>
+      <span class="badge bg-${getStatusBootstrapColor(data.status)}">${data.status.replace('_', ' ').toUpperCase()}</span>
+      <div class="small text-muted mt-1">
+        Last seen: ${data.lastSeen} ago
+      </div>
+      <div class="small mt-1">
+        <button class="btn btn-sm btn-primary" onclick="viewPatientDetails(${patientId})">
+          View Details
+        </button>
+      </div>
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent);
+  patientMarkers[patientId] = marker;
+}
+
+// Add geofence zone to map
+function addGeofenceZone(zoneId, data) {
+  const circle = L.circle([data.lat, data.lng], {
+    radius: data.radius,
+    color: '#007bff',
+    fillColor: '#007bff',
+    fillOpacity: 0.1,
+    weight: 2,
+    dashArray: '5, 5'
+  }).addTo(liveMap);
+  
+  circle.bindPopup(`
+    <div class="text-center">
+      <h6 class="mb-1">${data.name}</h6>
+      <div class="small text-muted">Safe Zone for ${data.patientName}</div>
+      <div class="small">Radius: ${(data.radius / 1000).toFixed(2)} km</div>
+    </div>
+  `);
+}
+
+// Helper function to get Bootstrap color class
+function getStatusBootstrapColor(status) {
+  const colorMap = {
+    'safe': 'success',
+    'away': 'warning', 
+    'outside_zone': 'danger',
+    'offline': 'secondary'
+  };
+  return colorMap[status] || 'secondary';
+}
+
+// Refresh map data
+function refreshMap() {
+  // Show loading state
+  document.getElementById('refreshMap').innerHTML = '<i class="bi bi-arrow-clockwise spin me-1"></i>Refreshing...';
+  
+  // Simulate API call - in real implementation, fetch from server
+  setTimeout(() => {
+    document.getElementById('refreshMap').innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh';
+    
+    // Update marker positions (in real app, get from API)
+    Object.keys(patientMarkers).forEach(patientId => {
+      // Add small random movement for demo
+      const marker = patientMarkers[patientId];
+      const currentPos = marker.getLatLng();
+      const newPos = {
+        lat: currentPos.lat + (Math.random() - 0.5) * 0.001,
+        lng: currentPos.lng + (Math.random() - 0.5) * 0.001
+      };
+      marker.setLatLng(newPos);
+    });
+  }, 1000);
+}
+
+// Center map on all patients
+function centerMap() {
+  if (Object.keys(patientMarkers).length > 0) {
+    const group = new L.featureGroup(Object.values(patientMarkers));
+    liveMap.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+// Set up real-time updates
+function setupRealTimeUpdates() {
+  // Update every 30 seconds
+  setInterval(() => {
+    refreshAllVitals();
+    updatePatientLocations();
+  }, 30000);
+}
+
+// Refresh all vital signs
+function refreshAllVitals() {
+  document.getElementById('refreshVitals').innerHTML = '<i class="bi bi-arrow-clockwise spin me-1"></i>Refreshing...';
+  
+  // In a real app, make AJAX call to fetch latest vitals
+  fetch('/api/v1/vitals/latest', {
+    headers: {
+      'Accept': 'application/json',
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    updateVitalsDisplay(data);
+    document.getElementById('refreshVitals').innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh';
+  })
+  .catch(error => {
+    console.error('Error refreshing vitals:', error);
+    document.getElementById('refreshVitals').innerHTML = '<i class="bi bi-arrow-clockwise me-1"></i>Refresh';
+  });
+}
+
+// Refresh specific patient vitals
+function refreshPatientVitals(patientId) {
+  // In a real app, make AJAX call to fetch specific patient vitals
+  fetch(`/api/v1/patients/${patientId}/vital_signs`, {
+    headers: {
+      'Accept': 'application/json',
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    updateSinglePatientVitals(patientId, data);
+  })
+  .catch(error => {
+    console.error('Error refreshing patient vitals:', error);
+  });
+}
+
+// Update vitals display
+function updateVitalsDisplay(vitalsData) {
+  vitalsData.forEach(vital => {
+    const patientId = vital.patient_id;
+    
+    // Update vital signs display
+    document.getElementById(`heartRate-${patientId}`).textContent = vital.heart_rate;
+    document.getElementById(`bloodPressure-${patientId}`).textContent = 
+      `${vital.blood_pressure_systolic}/${vital.blood_pressure_diastolic}`;
+    document.getElementById(`temperature-${patientId}`).textContent = `${parseFloat(vital.temperature).toFixed(2)}°F`;
+    document.getElementById(`lastUpdate-${patientId}`).textContent = 
+      `Last update: ${vital.time_ago} ago`;
+    
+    // Update status badge
+    const statusElement = document.getElementById(`vitalStatus-${patientId}`);
+    statusElement.className = `badge bg-${vital.status_color}`;
+    statusElement.textContent = vital.status.charAt(0).toUpperCase() + vital.status.slice(1);
+  });
+}
+
+// Update patient locations
+function updatePatientLocations() {
+  // In a real app, fetch latest location data
+  fetch('/api/v1/patients/locations', {
+    headers: {
+      'Accept': 'application/json',
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    data.forEach(location => {
+      if (patientMarkers[location.patient_id]) {
+        const marker = patientMarkers[location.patient_id];
+        marker.setLatLng([location.latitude, location.longitude]);
+        
+        // Update marker color based on status
+        const statusColors = {
+          'safe': '#28a745',
+          'away': '#ffc107', 
+          'outside_zone': '#dc3545',
+          'offline': '#6c757d'
+        };
+        marker.setStyle({
+          fillColor: statusColors[location.status] || '#6c757d'
+        });
+      }
+    });
+  })
+  .catch(error => {
+    console.error('Error updating locations:', error);
+  });
+}
+
+// Navigate to patient details
+function viewPatientDetails(patientId) {
+  window.location.href = `/patients/${patientId}`;
+}
+
+// Add CSS for spinning animation
+const style = document.createElement('style');
+style.textContent = `
+  .spin {
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(style);
+</script>
+
+</div> <!-- End Live Dashboard Container -->

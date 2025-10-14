@@ -1,0 +1,2 @@
+module GeofenceZonesHelper
+end

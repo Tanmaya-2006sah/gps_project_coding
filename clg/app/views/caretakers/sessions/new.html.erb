@@ -1,0 +1,118 @@
+<div class="container-fluid vh-100">
+  <div class="row h-100">
+    <!-- Left side - Professional Info -->
+    <div class="col-md-6 bg-success text-white d-flex align-items-center justify-content-center">
+      <div class="text-center">
+        <div class="mb-4">
+          <i class="bi bi-person-badge" style="font-size: 4rem;"></i>
+        </div>
+        <h1 class="h2 mb-3">Healthcare Professional Portal</h1>
+        <p class="lead mb-4">Advanced Patient Monitoring for Healthcare Providers</p>
+        <div class="row text-center">
+          <div class="col">
+            <i class="bi bi-clipboard-data-fill d-block mb-2" style="font-size: 2rem;"></i>
+            <small>Patient Records</small>
+          </div>
+          <div class="col">
+            <i class="bi bi-graph-up d-block mb-2" style="font-size: 2rem;"></i>
+            <small>Analytics</small>
+          </div>
+          <div class="col">
+            <i class="bi bi-bell-fill d-block mb-2" style="font-size: 2rem;"></i>
+            <small>Alerts</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right side - Login Form -->
+    <div class="col-md-6 d-flex align-items-center justify-content-center">
+      <div class="w-100" style="max-width: 400px;">
+        <div class="text-center mb-4">
+          <h2 class="h3 mb-3 text-success">Healthcare Professional</h2>
+          <p class="text-muted">Sign in to your professional dashboard</p>
+        </div>
+
+        <%= form_for(resource, as: resource_name, url: session_path(resource_name), local: true, class: "needs-validation", novalidate: true, html: { data: { turbo: false } }) do |f| %>
+          <div class="mb-3">
+            <%= f.label :email, "Professional Email", class: "form-label" %>
+            <%= f.email_field :email, autofocus: true, autocomplete: "email", class: "form-control", placeholder: "Enter your professional email", required: true %>
+            <div class="invalid-feedback">
+              Please provide a valid email address.
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <%= f.label :password, class: "form-label" %>
+            <%= f.password_field :password, autocomplete: "current-password", class: "form-control", placeholder: "Enter your password", required: true %>
+            <div class="invalid-feedback">
+              Please provide your password.
+            </div>
+          </div>
+
+          <% if devise_mapping.rememberable? %>
+            <div class="mb-3 form-check">
+              <%= f.check_box :remember_me, class: "form-check-input" %>
+              <%= f.label :remember_me, "Remember me", class: "form-check-label" %>
+            </div>
+          <% end %>
+
+          <div class="d-grid mb-3">
+            <%= f.submit "Sign In", class: "btn btn-success btn-lg" %>
+          </div>
+        <% end %>
+        
+        <div class="text-center mb-3">
+          <%= link_to "Forgot your password?", new_password_path(resource_name), class: "text-decoration-none text-success" %>
+        </div>
+        
+        <div class="text-center mb-4">
+          <small class="text-muted">
+            New healthcare professional? 
+            <%= link_to "Register here", new_registration_path(resource_name), class: "text-success text-decoration-none fw-bold" %>
+          </small>
+        </div>
+
+        <hr class="my-4">
+        
+        <!-- Family Login Option -->
+        <div class="text-center">
+          <p class="text-muted mb-2">Are you a family member?</p>
+          <%= link_to "Family Member Login", new_user_session_path, class: "btn btn-outline-primary" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Form validation
+  const forms = document.querySelectorAll('.needs-validation');
+  forms.forEach(form => {
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      form.classList.add('was-validated');
+    });
+  });
+});
+</script>
+
+<style>
+body {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;
+}
+
+.vh-100 {
+  min-height: 100vh;
+}
+
+@media (max-width: 768px) {
+  .col-md-6:first-child {
+    display: none;
+  }
+}
+</style>

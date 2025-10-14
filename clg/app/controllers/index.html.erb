@@ -1,0 +1,671 @@
+<!-- Dashboard Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h1 class="h2 fw-bold">Caretaker Dashboard</h1>
+    <p class="text-muted mb-0">Monitor your assigned patients in real-time</p>
+  </div>
+  <div class="d-flex gap-2">
+    <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh All
+    </button>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#emergencyModal">
+      <i class="bi bi-exclamation-triangle-fill me-1"></i>Emergency
+    </button>
+  </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-4 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-primary text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold"><%= @total_patients %></div>
+            <div>Total Patients</div>
+          </div>
+          <i class="bi bi-people-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-success text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold"><%= @primary_patients %></div>
+            <div>Primary Assignments</div>
+          </div>
+          <i class="bi bi-person-check-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-warning text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold"><%= @patients_with_alerts %></div>
+            <div>Need Attention</div>
+          </div>
+          <i class="bi bi-exclamation-triangle-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-xl-3 col-md-6">
+    <div class="card bg-danger text-white h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <div class="fs-2 fw-bold"><%= @critical_alerts %></div>
+            <div>Critical Alerts</div>
+          </div>
+          <i class="bi bi-heart-pulse-fill fs-1 opacity-75"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Dashboard Row -->
+<div class="row g-4">
+  <!-- Live Patient Map -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-geo-alt-fill text-primary me-2"></i>
+            Live Patient Locations
+          </h5>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary" onclick="refreshMap()">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+            <button class="btn btn-outline-primary" onclick="centerMap()">
+              <i class="bi bi-bullseye"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        <div id="patientMap" style="height: 400px;"></div>
+        <div class="p-3 bg-light border-top">
+          <div class="d-flex flex-wrap gap-3">
+            <div class="d-flex align-items-center">
+              <div class="bg-success rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Safe</small>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-warning rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Away</small>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-danger rounded-circle me-2" style="width: 12px; height: 12px;"></div>
+              <small>Outside Zone</small>
+            </div>
+            <div class="d-flex align-items-center">
+              <div class="bg-primary rounded-circle me-2" style="width: 12px; height: 12px; border: 2px solid white;"></div>
+              <small>Primary Patient</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Patients Needing Attention -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+          Patients Needing Attention
+        </h5>
+      </div>
+      <div class="card-body">
+        <% if @attention_patients.any? %>
+          <% @attention_patients.each do |patient| %>
+            <div class="border-bottom pb-2 mb-2">
+              <div class="d-flex justify-content-between align-items-start">
+                <div>
+                  <h6 class="mb-1">
+                    <%= patient.name %>
+                    <% if patient.primary_caretaker == current_caretaker %>
+                      <span class="badge bg-primary badge-sm">Primary</span>
+                    <% end %>
+                  </div>
+                  <% if patient.latest_vital_signs %>
+                    <div class="small">
+                      <span class="badge bg-<%= patient.latest_vital_signs.status_color %>">
+                        <%= patient.latest_vital_signs.status.humanize %>
+                      </span>
+                      <span class="text-muted ms-1">
+                        <%= time_ago_in_words(patient.latest_vital_signs.recorded_at) %> ago
+                      </span>
+                    </div>
+                  <% end %>
+                </div>
+                <%= link_to caretakers_patient_path(patient), class: "btn btn-sm btn-outline-primary" do %>
+                  <i class="bi bi-eye"></i>
+                <% end %>
+              </div>
+            </div>
+          <% end %>
+        <% else %>
+          <div class="text-center py-4">
+            <i class="bi bi-check-circle display-4 text-success mb-2"></i>
+            <p class="text-muted">All patients are doing well!</p>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vital Signs Charts -->
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">
+            <i class="bi bi-activity text-danger me-2"></i>
+            Vital Signs Trends (Last 24 Hours)
+          </h5>
+          <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-primary active" onclick="showVitalsChart('24h')">24h</button>
+            <button class="btn btn-outline-primary" onclick="showVitalsChart('7d')">7d</button>
+            <button class="btn btn-outline-primary" onclick="showVitalsChart('30d')">30d</button>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <% if @vital_signs_chart_data.any? %>
+            <% @vital_signs_chart_data.each_with_index do |(patient_name, data), index| %>
+              <div class="col-lg-6 mb-4">
+                <div class="card border-0 shadow-sm">
+                  <div class="card-header bg-white border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <div>
+                        <h6 class="mb-1 fw-bold"><%= patient_name %></h6>
+                        <small class="text-muted">Last 24 Hours Trends</small>
+                      </div>
+                      <span class="badge bg-<%= data[:latest_status] == 'normal' ? 'success' : data[:latest_status] == 'warning' ? 'warning' : 'danger' %> fs-6">
+                        <%= data[:latest_status].humanize %>
+                      </span>
+                    </div>
+                  </div>
+                  <div class="card-body">
+                    <!-- Latest Readings -->
+                    <div class="row mb-3">
+                      <div class="col-3 text-center">
+                        <div class="text-danger fw-bold fs-5"><%= data[:latest_readings][:heart_rate] || '-' %></div>
+                        <small class="text-muted">BPM</small>
+                      </div>
+                      <div class="col-3 text-center">
+                        <div class="text-warning fw-bold fs-5"><%= data[:latest_readings][:temperature] || '-' %></div>
+                        <small class="text-muted">°F</small>
+                      </div>
+                      <div class="col-6 text-center">
+                        <div class="text-primary fw-bold fs-5"><%= data[:latest_readings][:blood_pressure] || '-' %></div>
+                        <small class="text-muted">mmHg</small>
+                      </div>
+                    </div>
+                    
+                    <!-- Chart Container -->
+                    <div style="position: relative; height: 250px;">
+                      <canvas id="vitalsChart<%= index %>"></canvas>
+                    </div>
+                  </div>
+                  <div class="card-footer bg-light border-top-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>
+                        Updated: <%= Time.current.strftime('%H:%M') %>
+                      </small>
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-primary btn-sm" onclick="refreshPatientChart(<%= data[:patient_id] %>, <%= index %>)">
+                          <i class="bi bi-arrow-clockwise"></i>
+                        </button>
+                        <button class="btn btn-outline-primary btn-sm" onclick="viewPatientDetails(<%= data[:patient_id] %>)">
+                          <i class="bi bi-eye"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="col-12">
+              <div class="text-center py-5">
+                <i class="bi bi-graph-up display-1 text-muted mb-3"></i>
+                <h5 class="text-muted">No Vital Signs Data Available</h5>
+                <p class="text-muted">Vital signs charts will appear here once patients have recorded data in the last 24 hours.</p>
+                <button class="btn btn-outline-primary" onclick="refreshDashboard()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Refresh Data
+                </button>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Device Status and Activity Feed -->
+<div class="row g-4 mt-1">
+  <!-- Device Status -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-phone text-info me-2"></i>
+          Device Status Summary
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="text-center p-3 bg-light rounded">
+              <div class="fs-4 fw-bold text-primary"><%= @device_summary[:active_devices] %></div>
+              <div class="small text-muted">Active Devices</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="text-center p-3 bg-light rounded">
+              <div class="fs-4 fw-bold text-danger"><%= @device_summary[:low_battery_devices] %></div>
+              <div class="small text-muted">Low Battery</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="text-center p-3 bg-light rounded">
+              <div class="fs-4 fw-bold text-warning"><%= @device_summary[:poor_signal_devices] %></div>
+              <div class="small text-muted">Poor Signal</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="text-center p-3 bg-light rounded">
+              <div class="fs-4 fw-bold text-success"><%= @device_summary[:total_devices] %></div>
+              <div class="small text-muted">Total Devices</div>
+            </div>
+          </div>
+        </div>
+        
+        <hr>
+        
+        <h6 class="mb-2">Device Types</h6>
+        <% @device_summary[:device_types].each do |device_type, count| %>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <span class="small"><%= device_type.humanize %></span>
+            <span class="badge bg-primary"><%= count %></span>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Recent Device Logs -->
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="bi bi-list-ul text-secondary me-2"></i>
+          Recent Device Logs
+        </h5>
+      </div>
+      <div class="card-body">
+        <div style="max-height: 400px; overflow-y: auto;">
+          <% if @recent_device_logs.any? %>
+            <% @recent_device_logs.each do |log| %>
+              <div class="d-flex align-items-center border-bottom pb-2 mb-2">
+                <div class="flex-shrink-0 me-3">
+                  <div class="rounded-circle bg-light text-primary d-flex align-items-center justify-content-center" 
+                       style="width: 35px; height: 35px;">
+                    <i class="bi bi-phone small"></i>
+                  </div>
+                </div>
+                <div class="flex-grow-1">
+                  <div class="small fw-bold"><%= log.patient.name %></div>
+                  <div class="small text-muted">
+                    <%= log.device_name %> - <%= log.event_description %>
+                  </div>
+                  <div class="small text-muted">
+                    <i class="bi bi-clock me-1"></i><%= log.time_ago %> ago
+                    <% if log.battery_level %>
+                      <span class="badge bg-<%= log.battery_color %> ms-1">
+                        <i class="bi bi-battery"></i> <%= log.battery_level %>%
+                      </span>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          <% else %>
+            <div class="text-center py-4">
+              <i class="bi bi-journal-text display-4 text-muted mb-2"></i>
+              <p class="text-muted small">No recent device activity</p>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Initialize maps and charts
+document.addEventListener('DOMContentLoaded', function() {
+  initializePatientMap();
+  initializeVitalCharts();
+});
+
+let patientMap;
+let patientMarkers = {};
+
+// Initialize patient location map
+function initializePatientMap() {
+  // Default center (you can adjust this)
+  const defaultLat = 40.7128;
+  const defaultLng = -74.0060;
+  
+  patientMap = L.map('patientMap').setView([defaultLat, defaultLng], 11);
+  
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(patientMap);
+  
+  // Add patient markers
+  const locationData = <%= raw @location_data.to_json %>;
+  locationData.forEach(function(patient) {
+    addPatientMarker(patient);
+  });
+  
+  // Center map on patients
+  if (locationData.length > 0) {
+    const group = new L.featureGroup(Object.values(patientMarkers));
+    patientMap.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+function addPatientMarker(patient) {
+  const statusColors = {
+    'safe': '#28a745',
+    'away': '#ffc107',
+    'outside_zone': '#dc3545',
+    'offline': '#6c757d'
+  };
+  
+  const markerOptions = {
+    radius: patient.primary ? 12 : 8,
+    fillColor: statusColors[patient.status] || '#6c757d',
+    color: patient.primary ? '#ffffff' : '#000000',
+    weight: patient.primary ? 3 : 1,
+    opacity: 1,
+    fillOpacity: 0.8
+  };
+  
+  const marker = L.circleMarker([patient.latitude, patient.longitude], markerOptions)
+                  .addTo(patientMap);
+  
+  const popupContent = `
+    <div class="text-center">
+      <h6 class="mb-1">${patient.name}</h6>
+      ${patient.primary ? '<span class="badge bg-primary mb-1">Primary Patient</span><br>' : ''}
+      <span class="badge bg-${getStatusBootstrapColor(patient.status)}">${patient.status.toUpperCase().replace('_', ' ')}</span>
+      <div class="mt-2">
+        <a href="/caretakers/patients/${patient.id}" class="btn btn-sm btn-primary">View Details</a>
+      </div>
+    </div>
+  `;
+  
+  marker.bindPopup(popupContent);
+  patientMarkers[patient.id] = marker;
+}
+
+function getStatusBootstrapColor(status) {
+  const colorMap = {
+    'safe': 'success',
+    'away': 'warning',
+    'outside_zone': 'danger',
+    'offline': 'secondary'
+  };
+  return colorMap[status] || 'secondary';
+}
+
+// Initialize vital signs charts
+function initializeVitalCharts() {
+  const chartData = <%= raw @vital_signs_chart_data.to_json %>;
+  
+  Object.entries(chartData).forEach(([patientName, data], index) => {
+    const ctx = document.getElementById(`vitalsChart${index}`);
+    if (ctx) {
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: data.labels,
+          datasets: [
+            {
+              label: 'Heart Rate (BPM)',
+              data: data.datasets.heart_rate,
+              borderColor: 'rgb(220, 53, 69)',
+              backgroundColor: 'rgba(220, 53, 69, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 3,
+              pointHoverRadius: 5
+            },
+            {
+              label: 'Temperature (°F)',
+              data: data.datasets.temperature,
+              borderColor: 'rgb(255, 193, 7)',
+              backgroundColor: 'rgba(255, 193, 7, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              yAxisID: 'y1'
+            },
+            {
+              label: 'Blood Pressure (Systolic)',
+              data: data.datasets.blood_pressure_systolic,
+              borderColor: 'rgb(13, 110, 253)',
+              backgroundColor: 'rgba(13, 110, 253, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              yAxisID: 'y2'
+            },
+            {
+              label: 'Blood Pressure (Diastolic)',
+              data: data.datasets.blood_pressure_diastolic,
+              borderColor: 'rgb(108, 117, 125)',
+              backgroundColor: 'rgba(108, 117, 125, 0.1)',
+              borderWidth: 2,
+              fill: false,
+              tension: 0.1,
+              pointRadius: 3,
+              pointHoverRadius: 5,
+              yAxisID: 'y2'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          },
+          scales: {
+            x: {
+              display: true,
+              title: {
+                display: true,
+                text: 'Time'
+              },
+              grid: {
+                display: false
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: {
+                display: true,
+                text: 'Heart Rate (BPM)'
+              },
+              min: 50,
+              max: 120,
+              grid: {
+                color: 'rgba(0, 0, 0, 0.1)'
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: false,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Temperature (°F)'
+              },
+              min: 96,
+              max: 102
+            },
+            y2: {
+              type: 'linear',
+              display: false,
+              position: 'right',
+              title: {
+                display: true,
+                text: 'Blood Pressure (mmHg)'
+              },
+              min: 60,
+              max: 160
+            }
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom',
+              labels: {
+                usePointStyle: true,
+                padding: 20
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              titleColor: 'white',
+              bodyColor: 'white',
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              borderWidth: 1,
+              callbacks: {
+                title: function(context) {
+                  return `${patientName} - ${context[0].label}`;
+                },
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) {
+                    label += ': ';
+                  }
+                  label += context.parsed.y;
+                  return label;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+  });
+}
+
+// Utility functions
+function refreshDashboard() {
+  location.reload();
+}
+
+function refreshMap() {
+  // In a real app, fetch new location data
+  console.log('Refreshing map data...');
+}
+
+function centerMap() {
+  if (Object.keys(patientMarkers).length > 0) {
+    const group = new L.featureGroup(Object.values(patientMarkers));
+    patientMap.fitBounds(group.getBounds().pad(0.1));
+  }
+}
+
+function showVitalsChart(period) {
+  // Update chart period - in a real app, fetch new data
+  console.log('Showing vitals for period:', period);
+  
+  // Update active button
+  document.querySelectorAll('.btn-group .btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+}
+
+function refreshPatientChart(patientId, chartIndex) {
+  console.log(`Refreshing chart for patient ${patientId}...`);
+  
+  // Show loading state
+  const button = event.target.closest('button');
+  const originalContent = button.innerHTML;
+  button.innerHTML = '<div class="spinner-border spinner-border-sm"></div>';
+  button.disabled = true;
+  
+  // In a real application, you would fetch new data here
+  fetch(`<%= caretakers_root_path %>/patients/${patientId}/vitals_chart_data`)
+    .then(response => response.json())
+    .then(data => {
+      // Update the chart with new data
+      console.log('Updated chart data:', data);
+      // Reset button
+      button.innerHTML = originalContent;
+      button.disabled = false;
+    })
+    .catch(error => {
+      console.error('Error refreshing chart:', error);
+      button.innerHTML = originalContent;
+      button.disabled = false;
+    });
+}
+
+function viewPatientDetails(patientId) {
+  // Navigate to patient detail page
+  window.location.href = `<%= caretakers_root_path %>/patients/${patientId}`;
+}
+
+function refreshDashboard() {
+  // Refresh the entire dashboard
+  console.log('Refreshing dashboard...');
+  
+  // Show loading state
+  const button = event.target;
+  const originalContent = button.innerHTML;
+  button.innerHTML = '<div class="spinner-border spinner-border-sm me-1"></div>Refreshing...';
+  button.disabled = true;
+  
+  // Reload the page after a short delay
+  setTimeout(() => {
+    window.location.reload();
+  }, 1000);
+}
+</script>
